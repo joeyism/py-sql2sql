@@ -41,7 +41,8 @@ class ETL(object):
         return self
 
     def to_conn(self, conn):
-         """
+
+        """
         destination connection
 
         Parameters
@@ -54,7 +55,7 @@ class ETL(object):
         return self
 
     def extract(self, statement, tup=()):
-         """
+        """
         Extract statement
 
         Parameters
@@ -108,6 +109,7 @@ class ETL(object):
     def execute(self, before_extract=None, after_extract=None, before_load=None, after_load=None):
         """
         Executes the ETL in the order of
+
         * from_conn
         * before_extract
         * extract

@@ -23,7 +23,7 @@ psql = psycopg2.connect("dbname='dbname' user='username' host='url' password='pa
 
 
 # Actual usage
-from sql_etl.objects import ETL
+from sql2sql.objects import ETL
 
 extract = "sELECT col1, col2 FROM some_table"
 def transform(each_row):
