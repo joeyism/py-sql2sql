@@ -13,7 +13,7 @@ It's assumed that the SQL database driver is used with cursors.
 
 ### Basic Example
 
-```python3
+```python
 # Setting up the db connections
 import psycopg3
 import cx_Oracle
