@@ -2,11 +2,16 @@ import logging
 
 class ETL(object):
     from_conn = None
+    from_initial_query = None
+    from_final_query = None
+
     to_conn = None
+    to_initial_query = None
+    to_final_query = None
+
     extract_query = None
     transform_function = None
     load_query = None
-    load_all_query = None
 
     logger = logging.getLogger("etl")
 
@@ -28,7 +33,7 @@ class ETL(object):
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 
-    def from_conn(self, conn):
+    def from_conn(self, conn, initial_query=None, final_query=None):
         """
         source connection
 
@@ -38,9 +43,12 @@ class ETL(object):
             input connection
         """
         self.from_conn = conn
+        self.from_initial_query = initial_query
+        self.from_final_query = final_query
+
         return self
 
-    def to_conn(self, conn):
+    def to_conn(self, conn, initial_query=None, final_query=None):
 
         """
         destination connection
@@ -52,6 +60,8 @@ class ETL(object):
         """
 
         self.to_conn = conn
+        self.to_initial_query = initial_query
+        self.to_final_query = final_query
         return self
 
     def extract(self, statement, tup=()):
@@ -106,94 +116,74 @@ class ETL(object):
         self.load_all_query = (statement, tup)
         return self
 
-    def execute(self, before_extract=None, after_extract=None, before_load=None, after_load=None):
+    def execute(self, batch_size = 1000):
         """
         Executes the ETL in the order of
 
         * from_conn
-        * before_extract
-        * extract
-        * after_extract
-        * transform
+        * from_initial_query
         * to_conn
-        * before_load
-        * load
-        * after_load
+        * to_initial_query
+        * extract
+        * transform and load
+        * from_final_query
+        * to_final_query
 
 
         Parameters
         ----------
-        before_extract: function_like
-            A function that executes before extraction. The documentation of the function has to be:
-                Parameters
-                ----------
-                cur: cursor_like
-                    A cursor to the source connection
-
-        after_extract: function_like
-            A function that executes after extraction. The documentation of the function has to be:
-                Parameters
-                ----------
-                cur: cursor_like
-                    A cursor to the source connection
-
-        before_load: function_like
-            A function that executes before load. The documentation of the function has to be:
-                Parameters
-                ----------
-                cur: cursor_like
-                    A cursor to the source connection
-
-        after_load: function_like
-            A function that executes after load. The documentation of the function has to be:
-                Parameters
-                ----------
-                cur: cursor_like
-                    A cursor to the source connection
+        batch_size: int
+            batch size of the transform and load portion
         """
         if self.from_conn is not None:
             self.logger.debug("Creating extract cursor")
             extract_cur = self.from_conn.cursor()
 
-        if before_extract is not None:
-            self.logger.debug("Running before_extract")
-            before_extract(self.from_conn.cursor())
-
-        if self.extract_query is not None:
-            self.logger.debug("Execute extract_query")
-            extract_cur.execute(self.extract_query[0], self.extract_query[1])
-
-        if after_extract is not None:
-            self.logger.debug("Running after_extract")
-            after_extract(extract_cur)
-
-        if self.transform_function is not None:
-            self.logger.debug("Transforming Data")
-            transformed_data = []
-            for i, row in enumerate(extract_cur):
-                if i%1000 == 0:
-                    self.logger.debug("Transforming row: {}".format(str(i)))
-                transformed_data.append(self.transform_function(row))
+        if self.from_initial_query is not None:
+            from_initial_cur = self.from_conn.cursor()
+            from_initial_cur.execute(self.from_initial_query)
+            from_initial_cur.commit()
 
         if self.to_conn is not None:
             self.logger.debug("Creating load cursor")
             load_cur = self.to_conn.cursor()
 
-        if before_load is not None:
-            self.logger.debug("Running before_load")
-            before_load(self.to_conn.cursor(), transformed_data)
-
-        if self.load_query is not None:
-            self.logger.debug("Loading Data")
-            for i, data in enumerate(transformed_data):
-                if i%1000 == 0:
-                    self.logger.debug("Loading row: {}".format(str(i)))
-                load_cur.execute(self.load_query[0], data)
+        if self.to_initial_query is not None:
+            to_initial_cur = self.to_conn.cursor()
+            to_initial_cur.execute(self.to_initial_query)
+            to_initial_cur.commit()
 
 
-        if after_load is not None:
-            self.logger.debug("Running after_load")
-            after_load(load_cur)
+        # Extract
+        self.logger.debug("Execute extract_query")
+        extract_cur.execute(self.extract_query[0], self.extract_query[1])
+
+        # Transform and Load
+        i = 1
+        while True:
+            fetched_data = extract_cur.fetchmany(batch_size)
+
+            self.logger.debug("Transforming row: {}".format(str(i*batch_size)))
+            transformed_data = []
+            for row in fetched_data:
+                transformed_data.append(self.transform_function(row))
+
+            self.logger.debug("Loading row: {}".format(str(i*batch_size)))
+            for row in transformed_data:
+                load_cur.execute(self.load_query[0], row)
+
+            i += 1
+
+
+        if self.from_final_query is not None:
+            from_final_cur = self.from_conn.cursor()
+            from_final_cur.execute(self.from_final_query)
+            from_final_cur.commit()
+
+        if self.to_final_query is not None:
+            to_final_cur = self.to_conn.cursor()
+            to_final_cur.execute(self.to_final_query)
+            to_final_cur.commit()
 
         self.logger.debug("Commiting")
         self.to_conn.commit()

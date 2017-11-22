@@ -25,12 +25,12 @@ psql = psycopg2.connect("dbname='dbname' user='username' host='url' password='pa
 # Actual usage
 from sql2sql.objects import ETL
 
-extract = "sELECT col1, col2 FROM some_table"
+extract = "SELECT col1, col2 FROM some_table"
 def transform(each_row):
     print(each_row[0], each_row[1])
     each_row = (each_row[0] + 1, each_row[1] + 2)
     return each_row
-load = "iNSERT INTO new_table(col1, col2) VALUES (%s, %S)"
+load = "INSERT INTO new_table(col1, col2) VALUES (%s, %S)"
 
 ETL().from_conn(oracle).to_conn(psql).extract(extract).transform(transform).load(load).execute()
 ```
@@ -39,12 +39,12 @@ ETL().from_conn(oracle).to_conn(psql).extract(extract).transform(transform).load
 The actual order of function chain does not matter, as it stores everything and performs it during `execute`. The order of operation is
 
 * from_conn
-* before_extract
-* **extract**
-* after_extract
-* **transform**
+* from_initial_query
 * to_conn
-* before_load
-* **load**
-* after_load
+* to_initial_query
+* **extract**
+* **transform** and **load**
+* from_final_query
+* to_final_query
+
 
