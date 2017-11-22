@@ -48,3 +48,9 @@ The actual order of function chain does not matter, as it stores everything and 
 * to_final_query
 
 
+## Versions
+**1.0.0**
+* Switched up orders
+
+**0.0.1**
+* First Publish
