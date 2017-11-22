@@ -15,7 +15,7 @@ It's assumed that the SQL database driver is used with cursors.
 
 ```python
 # Setting up the db connections
-import psycopg3
+import psycopg2
 import cx_Oracle
 
 oracle = cx_Oracle.connect("username", "password", "url/db")
