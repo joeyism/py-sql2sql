@@ -18,10 +18,10 @@ It's assumed that the SQL database driver is used with cursors.
 Basic Example
 ~~~~~~~~~~~~~
 
-.. code:: python3
+.. code:: python
 
     # Setting up the db connections
-    import psycopg3
+    import psycopg2
     import cx_Oracle
 
     oracle = cx_Oracle.connect("username", "password", "url/db")
@@ -29,13 +29,14 @@ Basic Example
 
 
     # Actual usage
-    from sql_etl.objects import ETL
+    from sql2sql.objects import ETL
 
-    extract = "sELECT col1, col2 FROM some_table"
+    extract = "SELECT col1, col2 FROM some_table"
     def transform(each_row):
-        print(row[0], row[1])
-        return row
-    load = "iNSERT INTO new_table(col1, col2) VALUES (%s, %S)"
+        print(each_row[0], each_row[1])
+        each_row = (each_row[0] + 1, each_row[1] + 2)
+        return each_row
+    load = "INSERT INTO new_table(col1, col2) VALUES (%s, %S)"
 
     ETL().from_conn(oracle).to_conn(psql).extract(extract).transform(transform).load(load).execute()
 
@@ -46,11 +47,17 @@ The actual order of function chain does not matter, as it stores
 everything and performs it during ``execute``. The order of operation is
 
 -  from\_conn
--  before\_extract
--  **extract**
--  after\_extract
--  **transform**
+-  from\_initial\_query
 -  to\_conn
--  before\_load
--  **load**
--  after\_load
+-  to\_initial\_query
+-  **extract**
+-  **transform** and **load**
+-  from\_final\_query
+-  to\_final\_query
+
+Versions
+--------
+
+**1.0.0** \* Switched up orders
+
+**0.0.1** \* First Publish
