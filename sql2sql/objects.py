@@ -142,7 +142,7 @@ class ETL(object):
         if self.from_initial_query is not None:
             from_initial_cur = self.from_conn.cursor()
             from_initial_cur.execute(self.from_initial_query)
-            from_initial_cur.commit()
+            from_initial_cur.close()
 
         if self.to_conn is not None:
             self.logger.debug("Creating load cursor")
@@ -151,7 +151,7 @@ class ETL(object):
         if self.to_initial_query is not None:
             to_initial_cur = self.to_conn.cursor()
             to_initial_cur.execute(self.to_initial_query)
-            to_initial_cur.commit()
+            to_initial_cur.close()
 
 
         # Extract
@@ -162,6 +162,8 @@ class ETL(object):
         i = 1
         while True:
             fetched_data = extract_cur.fetchmany(batch_size)
+            if len(fetched_data) == 0:
+                break
 
             self.logger.debug("Transforming row: {}".format(str(i*batch_size)))
             transformed_data = []
@@ -178,12 +180,12 @@ class ETL(object):
         if self.from_final_query is not None:
             from_final_cur = self.from_conn.cursor()
             from_final_cur.execute(self.from_final_query)
-            from_final_cur.commit()
+            from_final_cur.close()
 
         if self.to_final_query is not None:
             to_final_cur = self.to_conn.cursor()
             to_final_cur.execute(self.to_final_query)
-            to_final_cur.commit()
+            to_final_cur.close()
 
         self.logger.debug("Commiting")
         self.to_conn.commit()
