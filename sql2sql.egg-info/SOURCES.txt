@@ -1,0 +1,8 @@
+README.rst
+setup.cfg
+setup.py
+sql2sql/objects.py
+sql2sql.egg-info/PKG-INFO
+sql2sql.egg-info/SOURCES.txt
+sql2sql.egg-info/dependency_links.txt
+sql2sql.egg-info/top_level.txt
